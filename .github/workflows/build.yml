@@ -1,0 +1,46 @@
+name: Build and Upload JAR
+
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Set up Java environment
+      uses: actions/setup-java@v4
+      with:
+        java-version: '17'
+        distribution: 'temurin'
+        cache: 'gradle'
+
+    - name: Grant gradlew execute permission
+      run: chmod +x gradlew
+
+    - name: Build project with Gradle
+      run: ./gradlew jar
+
+    - name: Find generated JAR file
+      id: find_jar
+      run: |
+        JAR_PATH=$(find build/libs -name "*.jar" -print -quit)
+        if [ -z "$JAR_PATH" ]; then
+          echo "Error: No JAR file found in build/libs/!"
+          exit 1
+        fi
+        echo "Found JAR file: $JAR_PATH"
+        echo "jar_path=$JAR_PATH" >> $GITHUB_OUTPUT
+
+    - name: Upload JAR file to Actions
+      uses: actions/upload-artifact@v4
+      with:
+        name: eCaptureBurp-jar
+        path: ${{ steps.find_jar.outputs.jar_path }}
